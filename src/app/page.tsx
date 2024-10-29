@@ -1,42 +1,33 @@
-import { ChevronLeftIcon, ChevronRightIcon, UploadIcon } from "@radix-ui/react-icons";
-import { ButtonIcon } from "@/app/ui/button-icon";
 import { UploadTransactionsForm } from "@/app/ui/overview/upload-transactions-form";
-import { IbanCommandWrapper } from "@/app/ui/overview/iban-command-wrapper";
 import { Suspense } from "react";
-import { InputSkeleton } from "@/app/ui/input-skeleton";
-import { Card, CardContent, CardTitle } from "@/components/ui/card";
-import { TrendingUpIcon } from "lucide-react";
-import { SummaryPreviousMonth } from "./ui/overview/summary-previous-month";
+import { BudgetCards } from "@/app/ui/overview/budget-cards";
+import { DatePicker } from "@/app/ui/overview/date-picker";
+import { IbanCommand } from "@/app/ui/overview/iban-command";
 
 type Props = {
-  searchParams?: { iban?: string }
+  searchParams?: { iban?: string, year?: string, month?: string }
 };
 
 export default async function Home(props: Props) {
   const searchParams = await props.searchParams;
+  const now = new Date();
+  const year = searchParams?.year ? parseInt(searchParams?.year) : now.getFullYear();
+  const month = searchParams?.month ? parseInt(searchParams?.month) - 1 : now.getMonth();
+
+  // const data = await getTransactionDataFor(year, month, searchParams?.iban);
 
   return (
     <>
       <nav className="p-4 border-solid border-b flex items-center gap-3">
-        <ButtonIcon>
-          <ChevronLeftIcon className="h-4 w-4" />
-        </ButtonIcon>
-        <div className="font-bold text-lg">
-          2024-10
-        </div>
-        <ButtonIcon>
-          <ChevronRightIcon className="h-4 w-4" />
-        </ButtonIcon>
+        <DatePicker year={year} month={month} />
 
-        <Suspense fallback={<InputSkeleton />}>
-          <IbanCommandWrapper />
-        </Suspense>
+        {/* <IbanCommand ibans={data.ibans} /> */}
 
         <UploadTransactionsForm />
       </nav>
 
-      <main className="mt-3 m-auto container">
-        <SummaryPreviousMonth />
+      <main className="mt-3 m-auto container p-2">
+        {/* <BudgetCards /> */}
       </main>
     </>
   );

@@ -1,5 +1,4 @@
 import { Card, CardTitle, CardContent } from "@/components/ui/card";
-import { TrendingUpIcon } from "lucide-react";
 
 export function SummaryCard(
     { title, icon, contentMain, contentSub }:

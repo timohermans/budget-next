@@ -1,18 +1,8 @@
 import { db } from "@/db";
 import { transactions } from "@/db/schema";
-import { desc, sql } from "drizzle-orm";
+import { and, between, desc, eq, sql } from "drizzle-orm";
 import Papa from "papaparse";
 
-
-export async function getIbans() {
-    const ibansByCount = await db
-        .selectDistinct({ iban: transactions.iban, ibanCount: sql<number>`cast(count(${transactions.iban}) as int)` })
-        .from(transactions)
-        .groupBy(transactions.iban)
-        .orderBy(({ ibanCount }) => desc(ibanCount));
-
-    return ibansByCount.map(i => i.iban);
-}
 
 export async function addTransactionsFrom(file: File) {
     // todo: add validation
@@ -74,4 +64,85 @@ function parse(csvContent: string): Promise<{
             },
         });
     })
+}
+
+function toDate(date: Date): string {
+    return date.toISOString().split('T')[0];
+}
+
+export async function getTransactionDataFor(year: number, month: number, ibanParam?: string) {
+    const previousStart = new Date(year, month - 1, 1);
+    const previousEnd = new Date(year, month - 1, 0);
+    const current = new Date(year, month, 1);
+    const ibans = await getIbans();
+    const iban = ibanParam ?? ibans[0];
+    const transactionsPreviousAndCurrentMonth = await db
+        .select({
+            followNumber: transactions.followNumber,
+            iban: transactions.iban,
+            amount: transactions.amount,
+            date: transactions.dateTransaction,
+            nameOtherParty: transactions.nameOtherParty,
+            ibanOtherParty: transactions.ibanOtherParty,
+            authorizationCode: transactions.authorizationCode,
+            description: transactions.description
+        })
+        .from(transactions)
+        .where(and(
+            between(transactions.dateTransaction, toDate(previousStart), toDate(previousEnd)),
+            eq(transactions.iban, iban)
+        ));
+
+    const incomeLastMonth = 0;
+    const expensesFixedLastMonth = 0;
+    const expensesPerWeek = new Map<number, number>();
+    const balancePerAccount = new Map<string, number>();
+    const incomeFromOwnAccounts = 0;
+    const expensesVariable = 0;
+
+    for (const transaction of transactionsPreviousAndCurrentMonth) {
+        const transactionDate = new Date(transaction.date);
+        const transactionAmount = parseInt(transaction.amount);
+        const isThisMonth = transactionDate.getMonth() === current.getMonth();
+        const weekNumber = toIsoWeekNumber(transactionDate);
+        const isIncome = transactionAmount > 0;
+        const isFixed = !!transaction.authorizationCode
+
+
+    }
+
+}
+
+function toIsoWeekNumber(date: Date): number {
+    // Get the day of week where 0 = Sunday, 1 = Monday, etc.
+    const dayOfWeek = date.getDay();
+    
+    // Convert Sunday (0) to 7 to match ISO week calculations
+    const correctedDayOfWeek = dayOfWeek === 0 ? 7 : dayOfWeek;
+    
+    // Move date to Thursday of the same week
+    // This is done by adding the number of days to reach Thursday
+    // (4 - correctedDayOfWeek) handles this calculation
+    const targetThursday = new Date(date);
+    targetThursday.setDate(date.getDate() + (4 - correctedDayOfWeek));
+    
+    // Get January 1st of the target Thursday's year
+    const yearStart = new Date(targetThursday.getFullYear(), 0, 1);
+    
+    // Calculate full weeks between yearStart and targetThursday
+    const weekNumber = Math.ceil(
+        (((targetThursday.getTime() - yearStart.getTime()) / 86400000) + 1) / 7
+    );
+    
+    return weekNumber;
+}
+
+async function getIbans() {
+    const ibansByCount = await db
+        .selectDistinct({ iban: transactions.iban, ibanCount: sql<number>`cast(count(${transactions.iban}) as int)` })
+        .from(transactions)
+        .groupBy(transactions.iban)
+        .orderBy(({ ibanCount }) => desc(ibanCount));
+
+    return ibansByCount.map(i => i.iban);
 }
