@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import { transactions } from "@/db/schema";
+import { getDistinctWeeksInMonth, toIsoWeekNumber } from "@/lib/date";
 import { and, between, desc, eq, sql } from "drizzle-orm";
 import Papa from "papaparse";
 
@@ -85,7 +86,8 @@ export async function getTransactionDataFor(year: number, month: number, ibanPar
             nameOtherParty: transactions.nameOtherParty,
             ibanOtherParty: transactions.ibanOtherParty,
             authorizationCode: transactions.authorizationCode,
-            description: transactions.description
+            description: transactions.description,
+            dateOfCashback: transactions.cashbackForDate
         })
         .from(transactions)
         .where(and(
@@ -93,48 +95,76 @@ export async function getTransactionDataFor(year: number, month: number, ibanPar
             eq(transactions.iban, iban)
         ));
 
-    const incomeLastMonth = 0;
-    const expensesFixedLastMonth = 0;
-    const expensesPerWeek = new Map<number, number>();
-    const balancePerAccount = new Map<string, number>();
-    const incomeFromOwnAccounts = 0;
-    const expensesVariable = 0;
+    let weeksInMonth = getDistinctWeeksInMonth(current);
+
+    let incomeLastMonth = 0;
+    let expensesFixedLastMonth = 0;
+    let expensesPerWeek = new Map<number, number>();
+    let balancePerAccount = new Map<string, number>();
+    let incomeFromOwnAccounts = 0;
+    let expensesVariable = 0;
 
     for (const transaction of transactionsPreviousAndCurrentMonth) {
         const transactionDate = new Date(transaction.date);
-        const transactionAmount = parseInt(transaction.amount);
+        const amount = parseInt(transaction.amount);
         const isThisMonth = transactionDate.getMonth() === current.getMonth();
+        const isLastMonth = !isThisMonth;
         const weekNumber = toIsoWeekNumber(transactionDate);
-        const isIncome = transactionAmount > 0;
+        const isIncome = amount > 0;
+        const isExpense = !isIncome;
         const isFixed = !!transaction.authorizationCode
+        const isVariable = !isFixed;
+        const isFromOwnAccount = ibans.some(i => i === transaction.iban);
+        const isFromOtherPary = ibans.every(i => i !== transaction.ibanOtherParty);
 
+        if (isLastMonth && isIncome && isFromOtherPary && transaction.dateOfCashback == null) {
+            incomeLastMonth += amount;
+        }
 
+        if (isLastMonth && isExpense && (isFixed || isFromOwnAccount)) {
+            expensesFixedLastMonth += amount;
+        }
+
+        if (isThisMonth) {
+            expensesPerWeek.set(weekNumber, 0);
+        }
+
+        if (isThisMonth && transaction.ibanOtherParty != null && isFromOwnAccount) {
+            balancePerAccount.set(transaction.ibanOtherParty, balancePerAccount.get(transaction.ibanOtherParty) ?? 0 + amount);
+        }
+
+        if (isThisMonth && isIncome && isFromOwnAccount && transaction.dateOfCashback == null) {
+            incomeFromOwnAccounts += amount;
+        }
+
+        if (isThisMonth && isExpense && isVariable && isFromOtherPary) {
+            expensesVariable += amount;
+            expensesPerWeek.set(weekNumber, expensesPerWeek.get(weekNumber) ?? 0 + amount);
+        }
+
+        if (isThisMonth && isIncome && transaction.dateOfCashback != null) {
+            expensesVariable += amount;
+            var cashbackWeek = toIsoWeekNumber(new Date(transaction.dateOfCashback));
+            expensesPerWeek.set(cashbackWeek, expensesPerWeek.get(cashbackWeek) ?? 0 + amount);
+        }
     }
 
-}
-
-function toIsoWeekNumber(date: Date): number {
-    // Get the day of week where 0 = Sunday, 1 = Monday, etc.
-    const dayOfWeek = date.getDay();
-    
-    // Convert Sunday (0) to 7 to match ISO week calculations
-    const correctedDayOfWeek = dayOfWeek === 0 ? 7 : dayOfWeek;
-    
-    // Move date to Thursday of the same week
-    // This is done by adding the number of days to reach Thursday
-    // (4 - correctedDayOfWeek) handles this calculation
-    const targetThursday = new Date(date);
-    targetThursday.setDate(date.getDate() + (4 - correctedDayOfWeek));
-    
-    // Get January 1st of the target Thursday's year
-    const yearStart = new Date(targetThursday.getFullYear(), 0, 1);
-    
-    // Calculate full weeks between yearStart and targetThursday
-    const weekNumber = Math.ceil(
-        (((targetThursday.getTime() - yearStart.getTime()) / 86400000) + 1) / 7
-    );
-    
-    return weekNumber;
+    return {
+        iban,
+        ibans,
+        date: current,
+        datePrevious: previousStart,
+        expensesFixedLastMonth,
+        incomeLastMonth,
+        weeksInMonth,
+        ExpensesVariable = expensesVariable,
+        ExpensesPerWeek = expensesPerWeek,
+        IncomeFromOwnAccounts = incomeFromOwnAccounts,
+        Transactions = transactions.Select(t => new OverviewTransaction(t, ibans)).ToList(),
+        BalancePerAccount = balancePerAccount,
+        BudgetAvailable = budgetAvailable,
+        BudgetPerWeek = weeksInMonth.Count > 0 ? Math.Floor(budgetAvailable / weeksInMonth.Count) : 0
+    };
 }
 
 async function getIbans() {
