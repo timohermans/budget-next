@@ -19,7 +19,7 @@ export default async function Home(props: Props) {
 
   return (
     <>
-      <nav className="p-4 border-solid border-b flex items-center gap-3 flex-wrap">
+      <nav className="p-4 border-solid border-b flex items-center gap-3 flex-wrap justify-center sm:justify-start">
         <DatePicker year={year} month={month} />
 
         <IbanCommand ibans={data.ibans} />
