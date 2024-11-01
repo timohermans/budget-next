@@ -1,6 +1,5 @@
 -- Current sql file was generated after introspecting the database
 -- If you want to run this migration please uncomment this code before executing migrations
-/*
 CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
 	"MigrationId" varchar(150) PRIMARY KEY NOT NULL,
 	"ProductVersion" varchar(32) NOT NULL
@@ -22,4 +21,3 @@ CREATE TABLE IF NOT EXISTS "transactions" (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "ix_transactions_follow_number_iban" ON "transactions" USING btree ("follow_number","iban");
-*/
