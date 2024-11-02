@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { transactions, TransactionsSelect } from "@/db/schema";
 import { getDistinctWeeksInMonth, toIsoWeekNumber } from "@/lib/date";
-import { and, between, desc, eq, InferSelectModel, sql } from "drizzle-orm";
+import { and, between, desc, eq, inArray, InferSelectModel, max, sql } from "drizzle-orm";
 import Papa from "papaparse";
 
 
@@ -67,7 +67,7 @@ function parse(csvContent: string): Promise<{
   })
 }
 
-function toDate(date: Date): string {
+function toDateString(date: Date): string {
   return date.toISOString().split('T')[0];
 }
 
@@ -95,7 +95,7 @@ export async function getTransactionDataFor(year: number, month: number, ibanPar
     })
     .from(transactions)
     .where(and(
-      between(transactions.dateTransaction, toDate(previousStart), toDate(currentEnd)),
+      between(transactions.dateTransaction, toDateString(previousStart), toDateString(currentEnd)),
       eq(transactions.iban, iban)
     ));
 
@@ -182,4 +182,65 @@ async function getIbans() {
     .orderBy(({ ibanCount }) => desc(ibanCount));
 
   return ibansByCount.map(i => i.iban);
+}
+
+export async function getCashflowOf(year: number, month: number, iban?: string) {
+  const dateStart = new Date(Date.UTC(year, month - 6, 1));
+  const dateEnd = new Date(Date.UTC(year, month + 1, 0));
+
+  let ibanCashflow = iban;
+  // if there's no iban selected, get the account with the most money
+  if (iban == null || iban === '') {
+    const ibanBalances = await db
+      .select({
+        iban: transactions.iban,
+        balance: max(transactions.balanceAfterTransaction)
+      })
+      .from(transactions)
+      .where(between(transactions.dateTransaction, toDateString(dateStart), toDateString(dateEnd)))
+      .groupBy(transactions.iban)
+      .orderBy(q => desc(q.balance));
+
+    if (ibanBalances.length > 0) {
+      ibanCashflow = ibanBalances[0]?.iban;
+    }
+  }
+
+  if (ibanCashflow == null) return {
+    ibanCashflow: "Geen",
+    balancesPerDate: []
+  };
+
+  const lastTransactionPerDateQuery = db.select({ date: transactions.dateTransaction, followNumber: max(transactions.followNumber).as('followNumber') })
+    .from(transactions)
+    .where(and(
+      eq(transactions.iban, ibanCashflow),
+      between(transactions.dateTransaction, toDateString(dateStart), toDateString(dateEnd))
+    ))
+    .groupBy(transactions.dateTransaction)
+    .as('dbf');
+
+  const balancesPerDate = await db
+    .select({
+      date: transactions.dateTransaction,
+      balance: transactions.balanceAfterTransaction
+    })
+    .from(transactions)
+    .innerJoin(
+      lastTransactionPerDateQuery,
+      and(
+        eq(transactions.dateTransaction, lastTransactionPerDateQuery.date),
+        eq(transactions.followNumber, lastTransactionPerDateQuery.followNumber)
+      )
+    )
+    .orderBy(q => q.date);
+
+  return {
+    ibanCashflow,
+    balancesPerDate: balancesPerDate.map(bpd => (
+      {
+        date: `${bpd.date.split('-')[2]}-${bpd.date.split('-')[1]}`,
+        balance: parseFloat(bpd.balance)
+      }))
+  };
 }
