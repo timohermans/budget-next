@@ -1,11 +1,8 @@
 
 import { getCashflowOf } from "@/app/use-cases";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { LineChart, CartesianGrid, XAxis, Line } from "recharts";
 import { CashflowLineChart } from "./cashflow-line-chart";
 import { TrendingDown, TrendingUpIcon } from "lucide-react";
-
 
 export async function Cashflow({ year, month, ibanCashflow }: { year: number, month: number, ibanCashflow?: string }) {
 
@@ -23,7 +20,6 @@ export async function Cashflow({ year, month, ibanCashflow }: { year: number, mo
   const balanceDiff = balanceAtEnd.balance - balanceAtStart.balance;
   const isBalanceGained = balanceDiff > 0;
   const balanceDiffAbs = Math.abs(balanceDiff);
-
 
   return (
     <Card>
