@@ -10,7 +10,6 @@ export async function addTransactionsFrom(file: File) {
   var enc = new TextDecoder("utf-8");
   const arrBuffer = await file.arrayBuffer();
   const csvContent = enc.decode(arrBuffer);
-  console.log(csvContent);
   if (!csvContent) return;
 
   const transactionsParsed = await parse(csvContent);
@@ -71,7 +70,7 @@ function toDateString(date: Date): string {
   return date.toISOString().split('T')[0];
 }
 
-type TransactionGet = Omit<InferSelectModel<typeof transactions>, "currency" | "balanceAfterTransaction">;
+export type TransactionGet = Omit<InferSelectModel<typeof transactions>, "currency" | "balanceAfterTransaction"> & { week: number, isFromOtherParty: boolean };
 
 export async function getTransactionDataFor(year: number, month: number, ibanParam?: string) {
   const previousStart = new Date(Date.UTC(year, month - 1, 1));
@@ -80,7 +79,7 @@ export async function getTransactionDataFor(year: number, month: number, ibanPar
   const ibans = await getIbans();
   const iban = ibanParam ?? ibans[0];
 
-  const transactionsPreviousAndCurrentMonth: TransactionGet[] = await db
+  const transactionsPreviousAndCurrentMonth = await db
     .select({
       id: transactions.id,
       followNumber: transactions.followNumber,
@@ -97,7 +96,8 @@ export async function getTransactionDataFor(year: number, month: number, ibanPar
     .where(and(
       between(transactions.dateTransaction, toDateString(previousStart), toDateString(currentEnd)),
       eq(transactions.iban, iban)
-    ));
+    ))
+    .orderBy(desc(transactions.dateTransaction));
 
   let weeksInMonth = getDistinctWeeksInMonth(current);
 
@@ -120,9 +120,9 @@ export async function getTransactionDataFor(year: number, month: number, ibanPar
     const isFixed = transaction.authorizationCode != null && transaction.authorizationCode !== '';
     const isVariable = !isFixed;
     const isFromOwnAccount = ibans.some(i => i === transaction.ibanOtherParty);
-    const isFromOtherPary = !isFromOwnAccount;
+    const isFromOtherParty = !isFromOwnAccount;
 
-    if (isLastMonth && isIncome && isFromOtherPary && transaction.cashbackForDate == null) {
+    if (isLastMonth && isIncome && isFromOtherParty && transaction.cashbackForDate == null) {
       incomeLastMonth += amount;
     }
 
@@ -131,7 +131,11 @@ export async function getTransactionDataFor(year: number, month: number, ibanPar
     }
 
     if (isThisMonth) {
-      transactionsCurrentMonth.push(transaction);
+      transactionsCurrentMonth.push({
+        ...transaction,
+        week: weekNumber,
+        isFromOtherParty
+      });
     }
 
     if (isThisMonth && transaction.ibanOtherParty != null && isFromOwnAccount) {
@@ -142,7 +146,7 @@ export async function getTransactionDataFor(year: number, month: number, ibanPar
       incomeFromOwnAccounts += amount;
     }
 
-    if (isThisMonth && isExpense && isVariable && isFromOtherPary) {
+    if (isThisMonth && isExpense && isVariable && isFromOtherParty) {
       expensesVariable += amount;
       expensesPerWeek.set(weekNumber, (expensesPerWeek.get(weekNumber) ?? 0) + amount);
     }

@@ -7,6 +7,7 @@ import { VariableExpensesCharts } from "./ui/overview/variable-expenses-charts";
 import { Cashflow } from "./ui/overview/cashflow";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TransactionsTable } from "./ui/overview/transactions-table";
 
 type Props = {
   searchParams?: { iban?: string, year?: string, month?: string, ibanCashflow?: string }
@@ -41,6 +42,10 @@ export default async function Home(props: Props) {
             <Cashflow year={year} month={month} ibanCashflow={ibanCashflow} />
           </Suspense>
         </div>
+
+        <section>
+          <TransactionsTable transactions={data.transactions} />
+        </section>
       </main>
     </>
   );
