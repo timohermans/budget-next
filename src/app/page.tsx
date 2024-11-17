@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TransactionsTable } from "./ui/overview/transactions-table";
 
 type Props = {
-  searchParams?: { iban?: string, year?: string, month?: string, ibanCashflow?: string }
+  searchParams?: Promise<{ iban?: string, year?: string, month?: string, ibanCashflow?: string }>
 };
 
 export default async function Home(props: Props) {
