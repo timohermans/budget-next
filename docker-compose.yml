@@ -1,0 +1,20 @@
+services:
+  budget-next:
+    container_name: budget-next
+    image: registry.timo-hermans.nl/budget-next:latest
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - traefik
+      - postgres
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.budgetnext.rule=HOST(`budget.timo-hermans.nl`)'
+      - 'traefik.http.services.budgetnext.loadbalancer.server.port=3000'
+
+networks:
+  postgres:
+    name: postgres
+    external: true
+  traefik:
+    external: true
