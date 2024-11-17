@@ -7,12 +7,12 @@ import { UploadIcon } from "@radix-ui/react-icons";
 import { useRef } from "react";
 
 export function UploadTransactionsForm() {
-    const formRef = useRef<HTMLFormElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
-    return (
-        <form action={addTransactions} ref={formRef}>
-            <InputFile id="transactionsFile" icon={<UploadIcon />} name="transactionsFile" label="Voeg nieuwe transacties toe" onChange={() => formRef.current?.requestSubmit()} />
-            <Button type="submit" className="sr-only">Voeg toe</Button>
-        </form>
-    );
+  return (
+    <form action={addTransactions} ref={formRef}>
+      <InputFile id="transactionsFile" icon={<UploadIcon />} name="transactionsFile" label="Voeg nieuwe transacties toe" onChange={() => formRef.current?.requestSubmit()} />
+      <Button type="submit" className="sr-only">Voeg toe</Button>
+    </form>
+  );
 }

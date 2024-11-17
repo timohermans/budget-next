@@ -8,12 +8,15 @@ import { Cashflow } from "./ui/overview/cashflow";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TransactionsTable } from "./ui/overview/transactions-table";
+import { auth } from "@/auth"
 
 type Props = {
   searchParams?: Promise<{ iban?: string, year?: string, month?: string, ibanCashflow?: string }>
 };
 
 export default async function Home(props: Props) {
+  const session = await auth();
+
   const searchParams = await props.searchParams;
   const now = new Date();
   const year = searchParams?.year ? parseInt(searchParams?.year) : now.getFullYear();
@@ -24,18 +27,24 @@ export default async function Home(props: Props) {
 
   return (
     <>
-      <nav className="p-4 border-solid border-b flex items-center gap-3 flex-wrap justify-center sm:justify-start">
-        <DatePicker year={year} month={month} />
+      <nav className="p-4 border-solid border-b flex items-center gap-3 flex-wrap justify-center sm:justify-between">
+        <div className="flex items-center gap-3 flex-wrap justify-center sm:justify-start">
+          <DatePicker year={year} month={month} />
 
-        <IbanCommand ibans={data.ibans} />
+          <IbanCommand ibans={data.ibans} />
 
-        <UploadTransactionsForm />
+          <UploadTransactionsForm />
+        </div>
+
+        <div>
+          Hello, {session?.user?.name}
+        </div>
       </nav>
 
       <main className="mt-3 m-auto container p-2 flex flex-col gap-3">
         <BudgetCards income={data.incomeLastMonth} expenses={data.expensesFixedLastMonth} budget={data.budgetAvailable} budgetPerWeek={data.budgetPerWeek} />
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <VariableExpensesCharts expensesPerWeek={data.expensesPerWeek} weeksInMonth={data.weeksInMonth} budgetPerWeek={data.budgetPerWeek} />
 
           <Suspense fallback={<Skeleton />}>
