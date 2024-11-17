@@ -1,17 +1,12 @@
-import { Card, CardTitle, CardContent } from "@/components/ui/card";
 import { BadgeEuroIcon, EqualIcon, TrendingDownIcon, TrendingUpIcon } from "lucide-react";
 import { SummaryCard } from "./summary-card";
 
 export async function BudgetCards({
-  year,
-  month,
   income,
   expenses,
   budget,
   budgetPerWeek
 }: {
-  year: number,
-  month: number,
   income: number,
   expenses: number,
   budget: number,

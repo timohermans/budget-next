@@ -6,7 +6,6 @@ import { DataTable } from "../data-table";
 import { Badge } from "@/components/ui/badge";
 import { RepeatIcon } from "lucide-react";
 import { ChangeEventHandler, useRef } from "react";
-import { transactions } from "@/db/schema";
 import { markTransactionAsCashback } from "@/app/actions";
 
 const columns: ColumnDef<TransactionGet>[] = [
@@ -63,22 +62,26 @@ const columns: ColumnDef<TransactionGet>[] = [
         return null;
       }
 
-      const ref: React.ForwardedRef<HTMLFormElement> = useRef(null);
-      const markCashbackWithId = markTransactionAsCashback.bind(null, transaction.id);
-
-      const handleCheck: ChangeEventHandler<HTMLInputElement> = (e) => {
-        ref.current?.requestSubmit();
-      }
-
-      return (
-        <form action={markCashbackWithId} className="text-center" ref={ref}>
-          <input name="date" type="hidden" value={transaction.dateTransaction} />
-          <input name="isCashback" type="checkbox" onChange={handleCheck} defaultChecked={transaction.cashbackForDate != null} />
-        </form>
-      )
+      return <CashbackForm transaction={transaction} />;
     },
   }
 ];
+
+function CashbackForm({ transaction }: { transaction: TransactionGet }) {
+  const ref: React.ForwardedRef<HTMLFormElement> = useRef(null);
+  const markCashbackWithId = markTransactionAsCashback.bind(null, transaction.id);
+
+  const handleCheck: ChangeEventHandler<HTMLInputElement> = () => {
+    ref.current?.requestSubmit();
+  }
+
+  return (
+    <form action={markCashbackWithId} className="text-center" ref={ref}>
+      <input name="date" type="hidden" value={transaction.dateTransaction} />
+      <input name="isCashback" type="checkbox" onChange={handleCheck} defaultChecked={transaction.cashbackForDate != null} />
+    </form>
+  )
+}
 
 export function TransactionsTable({ transactions }: { transactions: TransactionGet[] }) {
   return (

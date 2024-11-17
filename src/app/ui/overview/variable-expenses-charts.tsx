@@ -1,7 +1,7 @@
 "use client"
 
 import { TrendingDown, TrendingUp } from "lucide-react"
-import { Bar, BarChart, CartesianGrid, ComposedChart, Line, XAxis } from "recharts"
+import { Bar, CartesianGrid, ComposedChart, Line, XAxis } from "recharts"
 import {
   Card,
   CardContent,
@@ -63,7 +63,7 @@ export function VariableExpensesCharts({
   const amountOfWeeks = weeksInMonth.length;
   let totalSpent = 0;
 
-  for (const [_, expenses] of expensesPerWeek) {
+  for (const [, expenses] of expensesPerWeek) {
     totalSpent += (expenses * -1);
   }
 

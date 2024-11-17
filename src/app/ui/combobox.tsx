@@ -31,6 +31,15 @@ export function Combobox({ items, placeholder, emptyText, initialValue, onChange
   const [open, setOpen] = React.useState(false);
   const [value, setValue] = React.useState(initialValue);
 
+  function handleCommandSelect(currentValue: string) {
+    setValue(currentValue === value ? "" : currentValue);
+    setOpen(false);
+
+    if (onChange) {
+      onChange(currentValue);
+    }
+  }
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -56,11 +65,7 @@ export function Combobox({ items, placeholder, emptyText, initialValue, onChange
                 <CommandItem
                   key={item.value}
                   value={item.value}
-                  onSelect={(currentValue) => {
-                    setValue(currentValue === value ? "" : currentValue);
-                    setOpen(false);
-                    onChange && onChange(currentValue);
-                  }}
+                  onSelect={handleCommandSelect}
                 >
                   <Check
                     className={cn(

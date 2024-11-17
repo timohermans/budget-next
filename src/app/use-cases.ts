@@ -1,13 +1,13 @@
 import { db } from "@/db";
-import { transactions, TransactionsSelect } from "@/db/schema";
+import { transactions } from "@/db/schema";
 import { getDistinctWeeksInMonth, toIsoWeekNumber } from "@/lib/date";
-import { and, between, desc, eq, inArray, InferSelectModel, max, sql } from "drizzle-orm";
+import { and, between, desc, eq, InferSelectModel, max, sql } from "drizzle-orm";
 import Papa from "papaparse";
 
 
 export async function addTransactionsFrom(file: File) {
   // todo: add validation
-  var enc = new TextDecoder("utf-8");
+  const enc = new TextDecoder("utf-8");
   const arrBuffer = await file.arrayBuffer();
   const csvContent = enc.decode(arrBuffer);
   if (!csvContent) return;
@@ -37,7 +37,7 @@ function parse(csvContent: string): Promise<{
   description: string;
   cashbackForDate: null;
 }[]> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     Papa.parse(csvContent, {
       header: true,
       worker: false,
@@ -99,15 +99,15 @@ export async function getTransactionDataFor(year: number, month: number, ibanPar
     ))
     .orderBy(desc(transactions.dateTransaction));
 
-  let weeksInMonth = getDistinctWeeksInMonth(current);
+  const weeksInMonth = getDistinctWeeksInMonth(current);
 
   let incomeLastMonth = 0;
   let expensesFixedLastMonth = 0;
-  let expensesPerWeek = new Map<number, number>();
-  let balancePerAccount = new Map<string, number>();
+  const expensesPerWeek = new Map<number, number>();
+  const balancePerAccount = new Map<string, number>();
   let incomeFromOwnAccounts = 0;
   let expensesVariable = 0;
-  let transactionsCurrentMonth: TransactionGet[] = [];
+  const transactionsCurrentMonth: TransactionGet[] = [];
 
   for (const transaction of transactionsPreviousAndCurrentMonth) {
     const transactionDate = new Date(transaction.dateTransaction);
@@ -153,7 +153,7 @@ export async function getTransactionDataFor(year: number, month: number, ibanPar
 
     if (isThisMonth && isIncome && transaction.cashbackForDate != null) {
       expensesVariable += amount;
-      var cashbackWeek = toIsoWeekNumber(new Date(transaction.cashbackForDate));
+      const cashbackWeek = toIsoWeekNumber(new Date(transaction.cashbackForDate));
       expensesPerWeek.set(cashbackWeek, expensesPerWeek.get(cashbackWeek) ?? 0 + amount);
     }
   }

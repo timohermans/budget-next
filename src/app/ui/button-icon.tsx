@@ -1,16 +1,14 @@
-import { ChevronRightIcon } from "@radix-ui/react-icons"
-
 import { Button } from "@/components/ui/button"
 
 type Props = {
-    children: React.ReactNode
-    onClick?: () => void;
+  children: React.ReactNode
+  onClick?: () => void;
 }
 
 export function ButtonIcon({ children, onClick }: Props) {
-    return (
-        <Button onClick={() => onClick && onClick()} variant="outline" size="icon">
-            {children}
-        </Button>
-    )
+  return (
+    <Button onClick={() => onClick && onClick()} variant="outline" size="icon">
+      {children}
+    </Button>
+  )
 }
