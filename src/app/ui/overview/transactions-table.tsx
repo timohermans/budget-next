@@ -37,11 +37,11 @@ const columns: ColumnDef<TransactionGet>[] = [
     }
   },
   {
-    accessorKey: "authorizationCode",
+    accessorKey: "isFixed",
     header: "Vast",
     cell: ({ row }) => {
-      const authorizationCode = row.getValue('authorizationCode');
-      if (authorizationCode != null && authorizationCode !== '') {
+      const authorizationCode = row.getValue('isFixed');
+      if (!!authorizationCode) {
         return <RepeatIcon className="h-4 w-4" />
       }
 

@@ -4,6 +4,7 @@ import { getDistinctWeeksInMonth, toIsoWeekNumber } from "@/lib/date";
 import { and, between, desc, eq, InferSelectModel, max, sql } from "drizzle-orm";
 import Papa from "papaparse";
 
+const fixedPartyExceptions = ['paypal']
 
 export async function addTransactionsFrom(file: File) {
   // todo: add validation
@@ -70,7 +71,7 @@ function toDateString(date: Date): string {
   return date.toISOString().split('T')[0];
 }
 
-export type TransactionGet = Omit<InferSelectModel<typeof transactions>, "currency" | "balanceAfterTransaction"> & { week: number, isFromOtherParty: boolean };
+export type TransactionGet = Omit<InferSelectModel<typeof transactions>, "currency" | "balanceAfterTransaction"> & { week: number, isFromOtherParty: boolean, isFixed: boolean };
 
 export async function getTransactionDataFor(year: number, month: number, ibanParam?: string) {
   const previousStart = new Date(Date.UTC(year, month - 1, 1));
@@ -117,7 +118,9 @@ export async function getTransactionDataFor(year: number, month: number, ibanPar
     const weekNumber = toIsoWeekNumber(transactionDate);
     const isIncome = amount > 0;
     const isExpense = !isIncome;
-    const isFixed = transaction.authorizationCode != null && transaction.authorizationCode !== '';
+    const isFixed = transaction.authorizationCode != null
+      && transaction.authorizationCode !== ''
+      && fixedPartyExceptions.every(name => !transaction.nameOtherParty?.toLowerCase().includes(name));
     const isVariable = !isFixed;
     const isFromOwnAccount = ibans.some(i => i === transaction.ibanOtherParty);
     const isFromOtherParty = !isFromOwnAccount;
@@ -134,7 +137,8 @@ export async function getTransactionDataFor(year: number, month: number, ibanPar
       transactionsCurrentMonth.push({
         ...transaction,
         week: weekNumber,
-        isFromOtherParty
+        isFromOtherParty,
+        isFixed
       });
     }
 
