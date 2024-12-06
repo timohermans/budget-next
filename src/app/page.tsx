@@ -9,9 +9,14 @@ import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TransactionsTable } from "./ui/overview/transactions-table";
 import { auth } from "@/auth"
+import { Metadata } from "next";
 
 type Props = {
   searchParams?: Promise<{ iban?: string, year?: string, month?: string, ibanCashflow?: string }>
+};
+
+export const metadata: Metadata = {
+  title: 'Budget'
 };
 
 export default async function Home(props: Props) {
