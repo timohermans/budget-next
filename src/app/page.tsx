@@ -47,7 +47,7 @@ export default async function Home(props: Props) {
       </nav>
 
       <main className="mt-3 m-auto container p-2 flex flex-col gap-3">
-        <BudgetCards income={data.incomeLastMonth} expenses={data.expensesFixedLastMonth} budget={data.budgetAvailable} budgetPerWeek={data.budgetPerWeek} />
+        <BudgetCards income={data.incomeLastMonth} expenses={data.expensesFixedLastMonth} budget={data.budgetAvailable} budgetPerWeek={data.budgetPerWeek} variableExpenses={data.expensesVariable} />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <VariableExpensesCharts expensesPerWeek={data.expensesPerWeek} weeksInMonth={data.weeksInMonth} budgetPerWeek={data.budgetPerWeek} />
