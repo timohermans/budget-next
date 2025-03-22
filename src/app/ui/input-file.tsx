@@ -11,14 +11,14 @@ type Props = {
   label: React.ReactNode;
   icon?: React.ReactNode;
   onFileSelected?: () => void;
-  onChange: () => void;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
 }
 
 export function InputFile({ id, name, label, icon, onChange }: Props) {
   return (
     <div className="grid w-full max-w-sm items-center gap-1.5">
       <Label className={clsx('cursor-pointer', buttonVariants({ variant: "default", size: "default" }))} htmlFor={id}>{icon}{label}</Label>
-      <Input className="sr-only" name={name} id={id} type="file" onChange={() => onChange()} />
+      <Input className="sr-only" name={name} id={id} type="file" onChange={onChange} />
     </div>
   )
 }

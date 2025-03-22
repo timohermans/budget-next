@@ -7,7 +7,6 @@ import Papa from "papaparse";
 const fixedPartyExceptions = ['paypal']
 
 export async function addTransactionsFrom(file: File) {
-  // todo: add validation
   const enc = new TextDecoder("utf-8");
   const arrBuffer = await file.arrayBuffer();
   const csvContent = enc.decode(arrBuffer);
