@@ -9,13 +9,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       const { pathname } = request.nextUrl;
 
       if (!pathname.includes('/api/auth')) {
-        return !!auth;
+        return !!auth && !!auth.accessToken;
       }
 
       return true;
     },
     async session({ session, token }) {
-      session.accessToken = token.accessToken
+      if (!token.error) {
+        session.accessToken = token.accessToken
+      }
       return session
     },
     async jwt({ token, account }) {
@@ -32,7 +34,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         return token
       }
 
-      console.log('token expired');
       return refreshAccessToken(token)
     }
   },
@@ -68,6 +69,12 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
 
     const newTokens = await response.json();
 
+    if (newTokens.error) {
+      return {
+        error: 'token expired'
+      };
+    }
+
     return {
       ...token,
       accessToken: newTokens.access_token,
@@ -90,7 +97,7 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
 
       throw error;
     } catch (tokenError) {
-      console.log(tokenError);
+      console.log('something failed in refreshing the token', tokenError);
       return {
         ...token,
         error: tokenError instanceof Error ? tokenError.message : AuthError.RefreshTokenFailed,

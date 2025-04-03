@@ -1,24 +1,13 @@
-import { db } from "@/db";
-import { transactions } from "@/db/schema";
 import { getDistinctWeeksInMonth, toIsoWeekNumber } from "@/lib/date";
-import { and, between, desc, eq, InferSelectModel, max, sql } from "drizzle-orm";
 import Papa from "papaparse";
+import { createBudgetApiClient, getTokenHeader } from "@/lib/fetch";
+import { Transaction } from "@/lib/models";
 
 const fixedPartyExceptions = ['paypal']
 
-export async function addTransactionsFrom(file: File) {
-  const enc = new TextDecoder("utf-8");
-  const arrBuffer = await file.arrayBuffer();
-  const csvContent = enc.decode(arrBuffer);
-  if (!csvContent) return;
-
-  const transactionsParsed = await parse(csvContent);
-
-  await db
-    .insert(transactions)
-    .values(transactionsParsed)
-    .onConflictDoNothing();
-}
+// TODO: Remove all traces from drizzle-orm
+// TODO: Add waiting logic for upload
+// TODO: Add error handling for upload
 
 function formatNumber(numberStr: string): string {
   return numberStr.replace(',', '.').replace('+', '');
@@ -70,35 +59,26 @@ function toDateString(date: Date): string {
   return date.toISOString().split('T')[0];
 }
 
-export type TransactionGet = Omit<InferSelectModel<typeof transactions>, "currency" | "balanceAfterTransaction"> & { week: number, isFromOtherParty: boolean, isFixed: boolean };
-
 export async function getTransactionDataFor(year: number, month: number, ibanParam?: string) {
+  const client = createBudgetApiClient();
   const previousStart = new Date(Date.UTC(year, month - 1, 1));
   const current = new Date(Date.UTC(year, month, 1));
   const currentEnd = new Date(Date.UTC(year, month + 1, 0));
   const ibans = await getIbans();
   const iban = ibanParam ?? ibans[0];
 
-  const transactionsPreviousAndCurrentMonth = await db
-    .select({
-      id: transactions.id,
-      followNumber: transactions.followNumber,
-      iban: transactions.iban,
-      amount: transactions.amount,
-      dateTransaction: transactions.dateTransaction,
-      nameOtherParty: transactions.nameOtherParty,
-      ibanOtherParty: transactions.ibanOtherParty,
-      authorizationCode: transactions.authorizationCode,
-      description: transactions.description,
-      cashbackForDate: transactions.cashbackForDate
-    })
-    .from(transactions)
-    .where(and(
-      between(transactions.dateTransaction, toDateString(previousStart), toDateString(currentEnd)),
-      eq(transactions.iban, iban)
-    ))
-    .orderBy(desc(transactions.dateTransaction));
+  const transactionsResponse = client.GET('/Transactions', {
+    params: {
+      query: {
+        iban: iban,
+        startDate: toDateString(previousStart),
+        endDate: toDateString(currentEnd)
+      }
+    },
+    headers: await getTokenHeader()
+  });
 
+  const transactionsPreviousAndCurrentMonth = (await transactionsResponse).data ?? [];
   const weeksInMonth = getDistinctWeeksInMonth(current);
 
   let incomeLastMonth = 0;
@@ -107,11 +87,11 @@ export async function getTransactionDataFor(year: number, month: number, ibanPar
   const balancePerAccount = new Map<string, number>();
   let incomeFromOwnAccounts = 0;
   let expensesVariable = 0;
-  const transactionsCurrentMonth: TransactionGet[] = [];
+  const transactionsCurrentMonth: Transaction[] = [];
 
   for (const transaction of transactionsPreviousAndCurrentMonth) {
-    const transactionDate = new Date(transaction.dateTransaction);
-    const amount = parseFloat(transaction.amount);
+    const transactionDate = new Date(transaction.dateTransaction ?? "");
+    const amount = transaction.amount ?? 0;
     const isThisMonth = transactionDate.getMonth() === current.getMonth();
     const isLastMonth = !isThisMonth;
     const weekNumber = toIsoWeekNumber(transactionDate);
@@ -134,7 +114,18 @@ export async function getTransactionDataFor(year: number, month: number, ibanPar
 
     if (isThisMonth) {
       transactionsCurrentMonth.push({
-        ...transaction,
+        id: transaction.id ?? 0,
+        amount: amount,
+        balanceAfterTransaction: 0,
+        currency: '',
+        dateTransaction: transactionDate,
+        followNumber: transaction.followNumber ?? 0,
+        iban: transaction.iban,
+        nameOtherParty: transaction.nameOtherParty ?? "",
+        ibanOtherParty: transaction.ibanOtherParty ?? "",
+        authorizationCode: transaction.authorizationCode ?? "",
+        description: transaction.description ?? "",
+        cashbackForDate: transactions.cashbackForDate ? new Date(transaction.cashbackForDate ?? '') : undefined,
         week: weekNumber,
         isFromOtherParty,
         isFixed
@@ -182,72 +173,28 @@ export async function getTransactionDataFor(year: number, month: number, ibanPar
 }
 
 async function getIbans() {
-  const ibansByCount = await db
-    .selectDistinct({ iban: transactions.iban, ibanCount: sql<number>`cast(count(${transactions.iban}) as int)` })
-    .from(transactions)
-    .groupBy(transactions.iban)
-    .orderBy(({ ibanCount }) => desc(ibanCount));
+  const client = createBudgetApiClient();
+  const ibansResponse = client.GET('/Transactions/ibans', { headers: await getTokenHeader() });
+  const ibansByCount = (await ibansResponse).data ?? [];
 
-  return ibansByCount.map(i => i.iban);
+  return ibansByCount;
 }
 
 export async function getCashflowOf(year: number, month: number, iban?: string) {
+  const client = createBudgetApiClient();
   const dateStart = new Date(Date.UTC(year, month - 6, 1));
   const dateEnd = new Date(Date.UTC(year, month + 1, 0));
 
-  let ibanCashflow = iban;
-  // if there's no iban selected, get the account with the most money
-  if (iban == null || iban === '') {
-    const ibanBalances = await db
-      .select({
-        iban: transactions.iban,
-        balance: max(transactions.balanceAfterTransaction)
-      })
-      .from(transactions)
-      .where(between(transactions.dateTransaction, toDateString(dateStart), toDateString(dateEnd)))
-      .groupBy(transactions.iban)
-      .orderBy(q => desc(q.balance));
+  const cashflowResponse = await client.GET('/Transactions/cashflow-per-iban', {
+    params: {
+      query: {
+        startDate: toDateString(dateStart),
+        endDate: toDateString(dateEnd),
+        iban: iban
+      }
+    },
+    headers: await getTokenHeader()
+  });
 
-    if (ibanBalances.length > 0) {
-      ibanCashflow = ibanBalances[0]?.iban;
-    }
-  }
-
-  if (ibanCashflow == null) return {
-    ibanCashflow: "Geen",
-    balancesPerDate: []
-  };
-
-  const lastTransactionPerDateQuery = db.select({ date: transactions.dateTransaction, followNumber: max(transactions.followNumber).as('followNumber') })
-    .from(transactions)
-    .where(and(
-      eq(transactions.iban, ibanCashflow),
-      between(transactions.dateTransaction, toDateString(dateStart), toDateString(dateEnd))
-    ))
-    .groupBy(transactions.dateTransaction)
-    .as('dbf');
-
-  const balancesPerDate = await db
-    .select({
-      date: transactions.dateTransaction,
-      balance: transactions.balanceAfterTransaction
-    })
-    .from(transactions)
-    .innerJoin(
-      lastTransactionPerDateQuery,
-      and(
-        eq(transactions.dateTransaction, lastTransactionPerDateQuery.date),
-        eq(transactions.followNumber, lastTransactionPerDateQuery.followNumber)
-      )
-    )
-    .orderBy(q => q.date);
-
-  return {
-    ibanCashflow,
-    balancesPerDate: balancesPerDate.map(bpd => (
-      {
-        date: `${bpd.date.split('-')[2]}-${bpd.date.split('-')[1]}`,
-        balance: parseFloat(bpd.balance)
-      }))
-  };
+  return cashflowResponse.data;
 }
