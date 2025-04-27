@@ -125,7 +125,7 @@ export async function getTransactionDataFor(year: number, month: number, ibanPar
         ibanOtherParty: transaction.ibanOtherParty ?? "",
         authorizationCode: transaction.authorizationCode ?? "",
         description: transaction.description ?? "",
-        cashbackForDate: transactions.cashbackForDate ? new Date(transaction.cashbackForDate ?? '') : undefined,
+        cashbackForDate: transaction.cashbackForDate ? new Date(transaction.cashbackForDate ?? '') : undefined,
         week: weekNumber,
         isFromOtherParty,
         isFixed

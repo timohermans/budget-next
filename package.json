@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest",
-    "migrate": "drizzle-kit migrate"
+    "migrate": "drizzle-kit migrate",
+    "generate-api-client": "npx openapi-typescript ./budget-api-v1.json -o ./src/lib/budget-api/v1.d.ts"
   },
   "dependencies": {
     "@microsoft/kiota-bundle": "^1.0.0-preview.92",

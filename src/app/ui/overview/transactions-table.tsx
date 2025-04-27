@@ -1,21 +1,25 @@
 "use client"
 
-import { TransactionGet } from "@/app/use-cases";
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "../data-table";
 import { Badge } from "@/components/ui/badge";
 import { RepeatIcon } from "lucide-react";
 import { ChangeEventHandler, useRef } from "react";
 import { markTransactionAsCashback } from "@/app/actions";
+import { Transaction } from "@/lib/models";
 
-const columns: ColumnDef<TransactionGet>[] = [
+const columns: ColumnDef<Transaction>[] = [
   {
     accessorKey: "week",
     header: "Wk"
   },
   {
     accessorKey: "dateTransaction",
-    header: "Datum"
+    header: "Datum",
+    cell: ({row}) => {
+      const date = row.original.dateTransaction;
+      return `${date.getDate()}-${date.getMonth() + 1}`;
+    }
   },
   {
     accessorKey: "nameOtherParty",
@@ -56,9 +60,9 @@ const columns: ColumnDef<TransactionGet>[] = [
     id: "actions",
     header: "Terugbetaling",
     cell: ({ row }) => {
-      const transaction: TransactionGet = row.original;
+      const transaction: Transaction = row.original;
 
-      if (parseFloat(transaction.amount) < 0 || !transaction.isFromOtherParty) {
+      if (transaction.amount < 0 || !transaction.isFromOtherParty) {
         return null;
       }
 
@@ -67,7 +71,7 @@ const columns: ColumnDef<TransactionGet>[] = [
   }
 ];
 
-function CashbackForm({ transaction }: { transaction: TransactionGet }) {
+function CashbackForm({ transaction }: { transaction: Transaction }) {
   const ref: React.ForwardedRef<HTMLFormElement> = useRef(null);
   const markCashbackWithId = markTransactionAsCashback.bind(null, transaction.id);
 
@@ -77,13 +81,13 @@ function CashbackForm({ transaction }: { transaction: TransactionGet }) {
 
   return (
     <form action={markCashbackWithId} className="text-center" ref={ref}>
-      <input name="date" type="hidden" value={transaction.dateTransaction} />
+      <input name="date" type="hidden" value={transaction.dateTransaction.toISOString()} />
       <input name="isCashback" type="checkbox" onChange={handleCheck} defaultChecked={transaction.cashbackForDate != null} />
     </form>
   )
 }
 
-export function TransactionsTable({ transactions }: { transactions: TransactionGet[] }) {
+export function TransactionsTable({ transactions }: { transactions: Transaction[] }) {
   return (
     <DataTable columns={columns} data={transactions} />
   )

@@ -3,9 +3,6 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { db } from "@/db";
-import { transactions } from "@/db/schema";
-import { eq } from "drizzle-orm";
 import { createBudgetApiClient, getTokenHeader } from "@/lib/fetch";
 import type { paths } from "@/lib/budget-api/v1";
 
@@ -22,7 +19,7 @@ export async function addTransactions(formData: FormData) {
   apiForm.append('file', file);
 
   const response = await client.POST("/Transactions/upload", {
-    body:  apiForm as unknown as paths["/Transactions/upload"]["post"]["requestBody"]["content"]["multipart/form-data"],
+    body: apiForm as unknown as paths["/Transactions/upload"]["post"]["requestBody"]["content"]["multipart/form-data"],
     headers: await getTokenHeader(),
   });
 
@@ -79,11 +76,19 @@ export async function addTransactions(formData: FormData) {
 export async function markTransactionAsCashback(id: number, formData: FormData) {
   const isCashback = formData.get('isCashback');
   const date = formData.get('date')?.toString();
+  const client = createBudgetApiClient();
 
-  await db
-    .update(transactions)
-    .set({ cashbackForDate: isCashback === 'on' ? date : null })
-    .where(eq(transactions.id, id));
+  const response = await client.PATCH('/Transactions/{id}/cashback-date', {
+    params: { path: { id } },
+    headers: await getTokenHeader(),
+    body: {
+      cashbackForDate: isCashback === 'on' ? date?.split('T')[0] : null
+    }
+  });
+
+  console.log(JSON.stringify(response));
+
+  // TODO: error handling, etc.
 
   revalidatePath('/');
 }

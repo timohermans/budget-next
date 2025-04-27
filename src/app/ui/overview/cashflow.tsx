@@ -10,10 +10,17 @@ export async function Cashflow({ year, month, ibanCashflow }: { year: number, mo
 
   let balanceAtStart = { date: '', balance: 0 };
   let balanceAtEnd = { date: '', balance: 0 };
+  
+  if (!data) return null;
 
-  if (data.balancesPerDate.length > 2) {
-    balanceAtStart = data.balancesPerDate[0];
-    balanceAtEnd = data.balancesPerDate[data.balancesPerDate.length - 1];
+  const balancesPerDate = data.balancesPerDate.map(bpd => ({
+    date: bpd.date ?? '',
+    balance: bpd.balance ?? 0
+  }));
+
+  if (balancesPerDate.length > 2) {
+    balanceAtStart = balancesPerDate[0];
+    balanceAtEnd = balancesPerDate[data.balancesPerDate.length - 1];
   }
 
   const dateAtStart = balanceAtStart.date;
@@ -25,10 +32,10 @@ export async function Cashflow({ year, month, ibanCashflow }: { year: number, mo
     <Card>
       <CardHeader>
         <CardTitle>Balans</CardTitle>
-        <CardDescription>Geld dat we hebben op rekening {data.ibanCashflow}</CardDescription>
+        <CardDescription>Geld dat we hebben op rekening {data.iban}</CardDescription>
       </CardHeader>
       <CardContent>
-        <CashflowLineChart balancesPerDate={data.balancesPerDate} />
+        <CashflowLineChart balancesPerDate={balancesPerDate} />
       </CardContent>
       <CardFooter className="flex-col items-start gap-2 text-sm">
         <div className="flex gap-2 font-medium leading-none">

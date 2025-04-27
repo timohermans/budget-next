@@ -23,7 +23,8 @@ export interface paths {
             requestBody: {
                 content: {
                     "multipart/form-data": {
-                        file?: components["schemas"]["IFormFile"];
+                        /** Format: binary */
+                        file?: string;
                     };
                 };
             };
@@ -177,6 +178,73 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/Transactions/{id}/cashback-date": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["TransactionPatchCashbackDateCommandModel"];
+                    "text/json": components["schemas"]["TransactionPatchCashbackDateCommandModel"];
+                    "application/*+json": components["schemas"]["TransactionPatchCashbackDateCommandModel"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["Response2"];
+                        "application/json": components["schemas"]["Response2"];
+                        "text/json": components["schemas"]["Response2"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
     "/TransactionsFileJob/{id}": {
         parameters: {
             query?: never;
@@ -223,15 +291,13 @@ export interface components {
         BalanceAtDateDto: {
             /** Format: date */
             date?: string;
-            /** Format: decimal */
+            /** Format: double */
             balance?: number;
         };
         CashflowDto: {
             iban: string;
             balancesPerDate: components["schemas"]["BalanceAtDateDto"][];
         };
-        /** Format: binary */
-        IFormFile: string;
         ProblemDetails: {
             type?: string | null;
             title?: string | null;
@@ -244,13 +310,23 @@ export interface components {
             /** Format: uuid */
             jobId?: string;
         };
+        Response2: {
+            /** Format: int32 */
+            id?: number;
+            /** Format: date */
+            cashbackForDate?: string | null;
+        };
+        TransactionPatchCashbackDateCommandModel: {
+            /** Format: date */
+            cashbackForDate?: string | null;
+        };
         TransactionResponseModel: {
             /** Format: int32 */
             id?: number;
             /** Format: int32 */
             followNumber?: number;
             iban: string;
-            /** Format: decimal */
+            /** Format: double */
             amount?: number;
             /** Format: date */
             dateTransaction?: string;
