@@ -1,5 +1,4 @@
 import { getDistinctWeeksInMonth, toIsoWeekNumber } from "@/lib/date";
-import Papa from "papaparse";
 import { createBudgetApiClient, getTokenHeader } from "@/lib/fetch";
 import { Transaction } from "@/lib/models";
 
@@ -9,57 +8,11 @@ const fixedPartyExceptions = ['paypal']
 // TODO: Add waiting logic for upload
 // TODO: Add error handling for upload
 
-function formatNumber(numberStr: string): string {
-  return numberStr.replace(',', '.').replace('+', '');
-}
-
-function parse(csvContent: string): Promise<{
-  followNumber: number;
-  iban: string;
-  currency: string;
-  amount: string;
-  dateTransaction: string;
-  balanceAfterTransaction: string;
-  nameOtherParty: string;
-  ibanOtherParty: string;
-  authorizationCode: string;
-  description: string;
-  cashbackForDate: null;
-}[]> {
-  return new Promise((resolve) => {
-    Papa.parse(csvContent, {
-      header: true,
-      worker: false,
-      complete(results) {
-        const rows = results.data as { [key: string]: string | undefined }[];
-        const transactions = rows
-          .filter(r => !!r['Datum'])
-          .map(row => {
-            return {
-              followNumber: parseInt(row['Volgnr'] ?? '0'),
-              iban: row['IBAN/BBAN'] ?? '',
-              currency: row['Munt'] ?? '',
-              amount: formatNumber(row['Bedrag'] ?? '0'),
-              dateTransaction: row['Datum'] ?? '',
-              balanceAfterTransaction: formatNumber(row['Saldo na trn'] ?? '0'),
-              nameOtherParty: row['Naam tegenpartij'] ?? '',
-              ibanOtherParty: row['Tegenrekening IBAN/BBAN'] ?? '',
-              authorizationCode: row['Machtigingskenmerk'] ?? '',
-              description: row['Omschrijving-1'] ?? '' + row['Omschrijving-2'] ?? '' + row['Omschrijving-3'] ?? '',
-              cashbackForDate: null,
-            };
-          });
-        resolve(transactions);
-      },
-    });
-  })
-}
-
 function toDateString(date: Date): string {
   return date.toISOString().split('T')[0];
 }
 
-export async function getTransactionDataFor(year: number, month: number, ibanParam?: string) {
+export async function getTransactionDataFor(year: number, month: number, ibanParam?: string): Promise<TransactionData> {
   const client = createBudgetApiClient();
   const previousStart = new Date(Date.UTC(year, month - 1, 1));
   const current = new Date(Date.UTC(year, month, 1));
@@ -171,6 +124,23 @@ export async function getTransactionDataFor(year: number, month: number, ibanPar
     budgetPerWeek: weeksInMonth.length > 0 ? Math.floor(budgetAvailable / weeksInMonth.length) : 0
   };
 }
+
+export type TransactionData = {
+    iban : string;
+    ibans : string[];
+    date: Date;
+    datePrevious: Date;
+    expensesFixedLastMonth : number;
+    incomeLastMonth: number;
+    weeksInMonth: number[];
+    expensesVariable: number
+    expensesPerWeek: Map<number, number>;
+    incomeFromOwnAccounts: number;
+    transactions: Transaction[];
+    balancePerAccount: Map<string, number>;
+    budgetAvailable: number;
+    budgetPerWeek: number;
+};
 
 async function getIbans() {
   const client = createBudgetApiClient();

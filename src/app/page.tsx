@@ -1,6 +1,6 @@
 import { UploadTransactionsForm } from "@/app/ui/overview/upload-transactions-form";
 import { DatePicker } from "@/app/ui/overview/date-picker";
-import { getTransactionDataFor } from "@/app/use-cases";
+import { getTransactionDataFor, TransactionData } from "@/app/use-cases";
 import { IbanCommand } from "./ui/overview/iban-command";
 import { BudgetCards } from "./ui/overview/budget-cards";
 import { VariableExpensesCharts } from "./ui/overview/variable-expenses-charts";
@@ -28,7 +28,17 @@ export default async function Home(props: Props) {
   const month = searchParams?.month ? parseInt(searchParams?.month) - 1 : now.getMonth();
   const ibanCashflow = searchParams?.ibanCashflow;
 
-  const data = await getTransactionDataFor(year, month, searchParams?.iban);
+  let data: TransactionData | null = null;
+
+  try {
+    data = await getTransactionDataFor(year, month, searchParams?.iban);
+  } catch (error) {
+    console.error(error);
+  }
+
+  if (data == null) {
+    return <p>Something went wrong contacting the server... Sorry!</p>
+  }
 
   return (
     <>

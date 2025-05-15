@@ -1,4 +1,4 @@
-import NextAuth from "next-auth";
+import NextAuth, { Session } from "next-auth";
 import { JWT } from "next-auth/jwt";
 import Keycloak from "next-auth/providers/keycloak";
 
@@ -14,7 +14,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       return true;
     },
-    async session({ session, token }) {
+    async session({ session, token }: { session: Session, token: JWT}) {
       if (!token.error) {
         session.accessToken = token.accessToken
       }

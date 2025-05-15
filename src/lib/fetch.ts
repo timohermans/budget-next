@@ -1,4 +1,4 @@
-import { auth, signOut } from "@/auth";
+import { auth } from "@/auth";
 import createClient from "openapi-fetch";
 import { paths } from "@/lib/budget-api/v1";
 
